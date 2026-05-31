@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Birthday Quest: Свинтуз Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #050816;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(0, 255, 255, .12), transparent 30%),
+                radial-gradient(circle at 80% 70%, rgba(255, 0, 200, .12), transparent 30%);
+        }
+
+        #matrix,
+        #confettiCanvas {
+            position: fixed;
+            inset: 0;
+        }
+
+        .center {
+            position: relative;
+            z-index: 2;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card {
+            width: min(900px, 92vw);
+            padding: 30px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, .06);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, .08);
+            box-shadow: 0 0 40px rgba(0, 255, 255, .12);
+        }
+
+        h1 {
+            margin: 0 0 20px;
+            color: #00fff2;
+        }
+
+        .log {
+            height: 180px;
+            overflow: auto;
+            background: #08101d;
+            padding: 15px;
+            border-radius: 12px;
+        }
+
+        .line {
+            margin: 6px 0;
+        }
+
+        .btn {
+            position: absolute;
+            padding: 18px 28px;
+            border: none;
+            border-radius: 14px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            background: linear-gradient(135deg, #00fff2, #38a4ff);
+        }
+
+        .trap {
+            position: absolute;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: #1c2435;
+            color: #fff;
+            border: 1px solid #333;
+        }
+
+        #loader,
+        #final {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background: rgba(0, 0, 0, .92);
+        }
+
+        .barWrap {
+            width: min(700px, 85vw);
+            height: 32px;
+            border: 1px solid #444;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .bar {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, #00fff2, #00ff88);
+        }
+
+        #typed {
+            font-size: clamp(32px, 6vw, 90px);
+            font-weight: 800;
+            text-align: center;
+            color: #ffd700;
+            text-shadow: 0 0 20px gold;
+        }
+
+        .small {
+            margin-top: 25px;
+            text-align: center;
+            max-width: 900px;
+            font-size: clamp(16px, 2vw, 24px);
+        }
+
+        .badge {
+            position: fixed;
+            right: 15px;
+            top: 15px;
+            background: #121a2d;
+            padding: 10px 14px;
+            border-radius: 12px;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix"></canvas>
+
+    <div class="badge">🏆 Достижения: <span id="ach">0</span>/3</div>
+
+    <div class="center">
+        <div class="card">
+            <h1>Birthday Protocol v13.37</h1>
+            <div class="log" id="log">
+                <div class="line">[SYSTEM] Цель обнаружена: СВИНТУЗ</div>
+                <div class="line">[SYSTEM] Роль: Программист</div>
+                <div class="line">[WARNING] Подарок защищён от преждевременного получения.</div>
+                <div class="line">[TASK] Попробуйте получить подарок.</div>
+            </div>
+        </div>
+        <button class="btn" id="mainBtn">🎁 Получить подарок</button>
+    </div>
+
+    <div id="loader">
+        <h2>Компиляция подарка для Свинтуза...</h2>
+        <div class="barWrap">
+            <div class="bar"></div>
+        </div>
+        <h3 id="pct">0%</h3>
+    </div>
+
+    <div id="final">
+        <div id="typed"></div>
+        <div class="small">
+            Пусть код собирается с первого раза.<br>
+            Пусть баги находятся быстрее, чем дедлайны.<br>
+            Пусть мотивация возвращается раньше, чем выгорание.<br><br>
+            🚀 Удачи во всех проектах, брат.
+        </div>
+    </div>
+
+    <script>
+        console.log("🎉 С ДНЁМ РОЖДЕНИЯ, СВИНТУЗ! Если читаешь консоль — достижение разблокировано.");
+
+        const log = (t) => {
+            const el = document.getElementById('log');
+            el.innerHTML += `<div class="line">${t}</div>`;
+            el.scrollTop = el.scrollHeight;
+        };
+
+        let achievements = 0;
+
+        function ach(msg) {
+            achievements++;
+            document.getElementById('ach').textContent = achievements;
+            log("🏆 ДОСТИЖЕНИЕ: " + msg);
+        }
+
+        const btn = document.getElementById('mainBtn');
+        let dodges = 0;
+
+        function moveBtn() {
+            btn.style.left = Math.random() * (innerWidth - 250) + 'px';
+            btn.style.top = Math.random() * (innerHeight - 100) + 'px';
+        }
+        moveBtn();
+
+        btn.addEventListener('mouseover', () => {
+            if (dodges < 15) {
+                moveBtn();
+                dodges++;
+                const jokes = [
+                    "ERROR 418: Подарок стал чайником",
+                    "Segmentation Fault: Свинтуз почти поймал кнопку",
+                    "rm -rf подарок",
+                    "Java обнаружена. Побег активирован.",
+                    "Компиляция уклонения успешна."
+                ];
+                log(jokes[Math.floor(Math.random() * jokes.length)]);
+                if (dodges === 5) {
+                    ach("Охотник за кнопками");
+                  spawnTraps();
+                }
+            } else {
+                btn.textContent = "Ладно, жми 😅";
+            }
+        });
+
+        function spawnTraps() {
+            ["Удалить Linux", "Стать Java-разработчиком", "Сломать прод", "Закрыть вкладку"].forEach(t => {
+                const b = document.createElement('button');
+                b.className = 'trap';
+                b.textContent = t;
+                b.style.left = Math.random() * (innerWidth - 200) + 'px';
+                b.style.top = Math.random() * (innerHeight - 100) + 'px';
+                b.onclick = () => log("❌ Неверный выбор: " + t);
+                document.body.appendChild(b);
+            });
+        }
+
+        btn.onclick = () => {
+            ach("Нашёл настоящий подарок");
+            document.getElementById('loader').style.display = 'flex';
+            let p = 0;
+            const timer = setInterval(() => {
+                p += Math.random() * 10 + 2;
+                if (p > 100) {
+                    p = 100;
+                }
+                document.querySelector('.bar').style.width = p + '%';
+                pct.textContent = Math.floor(p) + '%';
+                if (p === 100) {
+                    clearInterval(timer);
+                    setTimeout(showFinal, 600);
+                }
+            }, 120);
+        };
+
+        function showFinal() {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('final').style.display = 'flex';
+            ach("Финальный босс побеждён");
+
+            const text = "🎉 КАВАБАНГА! 🎉\nС ДНЁМ РОЖДЕНИЯ,\nСВИНТУЗ 🐷";
+            let i = 0;
+            (function type() {
+                if (i <= text.length) {
+                    typed.innerHTML = text.slice(0, i).replace(/\n/g, "<br>");
+                    i++;
+                    setTimeout(type, 55);
+                }
+            })();
+
+            const end = Date.now() + 10000;
+            (function frame() {
+                confetti({
+                    particleCount: 15,
+                    spread: 360,
+                    startVelocity: 40,
+                    origin: {
+                        x: Math.random(),
+                        y: Math.random() - 0.2
+                    }
+                });
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            })();
+        }
+
+        const c = document.getElementById('matrix');
+        const ctx = c.getContext('2d');
+
+        function resize() {
+            c.width = innerWidth;
+            c.height = innerHeight;
+        }
+        resize();
+        addEventListener('resize', resize);
+
+        const chars = "01{}[]<>/=+-#@$";
+        const drops = Array(Math.floor(innerWidth / 18)).fill(1);
+
+        (function draw() {
+            ctx.fillStyle = 'rgba(5, 8, 22, 0.12)';
+            ctx.fillRect(0, 0, c.width, c.height);
+            ctx.fillStyle = '#00ff88';
+            ctx.font = '14px monospace';
+            for (let i = 0; i < drops.length; i++) {
+                const txt = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillText(txt, i * 18, drops[i] * 18);
+                if (drops[i] * 18 > c.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+            requestAnimationFrame(draw);
+        })();
+    </script>
+</body>
+</html>
